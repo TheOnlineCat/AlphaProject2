@@ -1,3 +1,3 @@
 export namespace Config {
-    export const Resource = "Resources";
+    export const images = "./resources/images";
 }
