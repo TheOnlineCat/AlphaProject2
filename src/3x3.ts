@@ -9,7 +9,7 @@ const app = new Application<HTMLCanvasElement>({ resizeTo: window });
 app.renderer.background.color = 0x23395D;
 app.renderer.resize(window.innerWidth, window.innerHeight);
 app.renderer.view.style.position = "absolute";
-app.ticker.autoStart = false
+app.ticker.autoStart = true;
 
 document.body.appendChild(app.view);
 
@@ -22,8 +22,10 @@ let mouseCoords = {x: 0, y: 0};
 // });
 
 
-export function sleep(ms: number) {
-    return new Promise( resolve => setTimeout(resolve, ms) );
+export class Timer{
+    static sleep(ms: number) {
+        return new Promise( resolve => setTimeout(resolve, ms) );
+    }
 }
 
 export namespace Slots {
@@ -42,12 +44,16 @@ export namespace Slots {
     }
     class Tile extends PIXI.Sprite{
         static Size = 80;
+        static Padding = 5;
+
+        face: number;
 
         constructor(face: Face) {
             let texture: PIXI.Texture = Texture.from(Resources[face]);
             super(texture)
-            this.height = Tile.Size;
-            this.width = Tile.Size;
+            this.face = face;
+            this.height = Tile.Size - Tile.Padding;
+            this.width = Tile.Size - Tile.Padding;
         }
 
         static RandomFace(){
@@ -55,6 +61,7 @@ export namespace Slots {
         }
     }
     class Column extends PIXI.Sprite{
+        private seed = Math.random();
         private stripLength: number = 5;
         private speed: number = 20;
 
@@ -63,7 +70,9 @@ export namespace Slots {
         private tileArray : PIXI.Sprite[];
         private currentTile: number = 0;
         private targetTiles: number = 50;
-        private resultTiles: Tile[] = [];
+        private resultFaces: Face[] = [];
+
+        private slotTicker!: PIXI.Ticker;
 
         public ctx: Slot;
 
@@ -82,8 +91,7 @@ export namespace Slots {
             }
             
             this.anchor.set(0.5);
-            this.x = app.screen.width/2;
-            this.y = app.screen.height/2;
+            
         }
 
         private GenerateTile(face: Face) {
@@ -93,30 +101,28 @@ export namespace Slots {
         }
 
         private AddTile(tile: Tile) {
-            this.addChild(tile)
-            this.tileArray.push(tile)
             this.tileArray[0].destroy();
             this.tileArray.shift()
+            this.tileArray.push(tile)
+            this.addChild(tile)
         }
 
-        Spin(resultTiles: Face[]) {
-
-            resultTiles.forEach(face => {
-                this.resultTiles.push(this.GenerateTile(face))
-            });
-
+        Spin(resultFaces: Face[]) {
+            this.resultFaces = [...resultFaces];
             this.currentSpeed = this.speed;
             this.elapsedTime = 0;
-            this.currentTile = 0;
-            app.ticker.remove(this.UpdateSpin);
-            app.ticker.add((delta) => this.UpdateSpin(delta));
-            this.StopSpin(200);
+            //this.currentTile = 0;
+            console.log("spinning")
+            this.slotTicker = new PIXI.Ticker();
+            this.slotTicker.autoStart = true;
+            this.slotTicker.add((delta) => this.UpdateSpin(delta));
+            //this.StopSpin(200);
         }
 
         UpdateSpin(delta: number) {
             this.y += delta * this.currentSpeed
 
-            let relativePos = (this.position.y - (app.screen.height/2))
+            let relativePos = this.position.y
             let tileElapsed = Math.floor((relativePos / Tile.Size));
 
             if (tileElapsed < (this.targetTiles - this.stripLength + 1)) {
@@ -126,41 +132,39 @@ export namespace Slots {
                 }
             }
             else if (tileElapsed < this.targetTiles) {
-                for(let i = 0; i < tileElapsed - this.currentTile; i++) {
-                    let tile = this.resultTiles.shift();
-                    if (tile instanceof Tile) {
+                for(let i = 0; i < tileElapsed - this.currentTile; i++)  {
+                    let face = this.resultFaces.shift();
+                    if (face != undefined) {
+                        let tile = (this.GenerateTile(face))
                         this.addChild(tile)
                         this.tileArray.push(tile)
-                        console.log("g" + this)
+                        this.addChild(tile)
                     }
                     else {
-                        let tile =  this.GenerateTile(Tile.RandomFace())
+                        let tile = this.GenerateTile(Tile.RandomFace())
                         this.AddTile(tile)
                     }
-                    
+                    while(this.tileArray.length > this.stripLength){
+                        this.tileArray[0].destroy();
+                        this.tileArray.shift()
+                    }
                 }
-                // let leftover = this.targetTiles - tileElapsed -this.resultTiles.length;
-                // for(let i = 0; i < leftover; i++){
-                //     let tile =  this.GenerateTile(Tile.RandomFace())
-                //     this.AddTile(tile)
-                // }
             }
 
             this.currentTile = tileElapsed;
+            if(this.currentTile < this.targetTiles ) {
+                this.currentSpeed = this.speed * (1.1 - (this.currentTile / this.targetTiles));
+            }
+            else {
+                this.StopSpin();
+            }            
         }
 
-        async StopSpin(freq: number){
-            while(this.currentTile < this.targetTiles) {
-                this.currentSpeed = this.speed * (1.1 - (this.currentTile / this.targetTiles));  
-                
-                await sleep(freq);
-            }
+        async StopSpin(){            
+            await Timer.sleep(500);
+            this.targetTiles += this.targetTiles;
             this.currentSpeed = 0;
-
-            for(let i = 0; i < this.resultTiles.length; i++) {
-                this.tileArray[0].destroy();
-                this.tileArray.shift()
-            }
+            this.slotTicker.destroy();
         }
 
 
@@ -188,7 +192,7 @@ export namespace Slots {
                 this.elapsedTime += freq;
                 this.currentSpeed = this.speed *  (1 - (this.elapsedTime / totalTime));  
                 
-                await sleep(freq);
+                await Timer.sleep(freq);
             }
 
             this.currentSpeed = 0;
@@ -198,7 +202,7 @@ export namespace Slots {
     }
 
     export class Slot extends PIXI.Sprite{
-        private columns: number = 3;
+        private columns: number = 5;
         private rows: number = 3
         private gap: number = 5;
         private cascadeDelay: number = 150;
@@ -216,6 +220,9 @@ export namespace Slots {
             this.on('click', () => {
                 slot.Spin();
             })
+            this.anchor.set(0.5);
+            this.x = app.screen.width/2;
+            this.y = app.screen.height/2;
         }
 
         public get SpinTime() {
@@ -224,7 +231,7 @@ export namespace Slots {
 
         private GenerateColumn() {
             let positionX = (Tile.Size + this.gap);
-            let startX = app.screen.width/2 - (positionX * this.columns/2)
+            let startX = 0 - (positionX * this.columns/2)
             for(let i = 0; i < this.columns; i++) {
                 const column = new Column(this, this.rows, this.spinSpeed);
                 column.position.x = startX + (positionX * i);
@@ -235,13 +242,12 @@ export namespace Slots {
 
 
         async Spin() {
-            app.ticker.start();
 
-            let faces: Face[] = [Face.JOKER, Face.JOKER, Face.JOKER, Face.JOKER, Face.JOKER]
+            let faces: Face[] = [Face.JOKER, Face.JOKER, Face.JOKER]
 
             for(let i = 0; i < this.columns; i++) {
                 this.slots[i].Spin(faces);
-                await sleep(this.cascadeDelay);
+                await Timer.sleep(this.cascadeDelay);
             }
         }
     }
