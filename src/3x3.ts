@@ -33,22 +33,30 @@ export namespace Slots {
     const path = Config.images;
 
     const Resources = [
-        `${path}/joker.jpg`,
-        `${path}/clown.jpeg`
+        `${path}/joker.png`,
+        `${path}/clown.jpeg`,
+        `${path}/horse.jpg`
     ]
 
-    enum Face
-    {
+    enum Face {
         JOKER = 0,
         REDCLOWN = 1,
+        HORSE = 2,
     }
+
+    const Score: number[] = [
+        1000,
+        500,
+        200
+    ]
+
     class Tile extends PIXI.Sprite{
         static Size = 80;
         static Padding = 5;
 
         face: number;
 
-        constructor(face: Face) {
+        constructor(face: number) {
             let texture: PIXI.Texture = Texture.from(Resources[face]);
             super(texture)
             this.face = face;
@@ -57,12 +65,13 @@ export namespace Slots {
         }
 
         static RandomFace(){
-            return(Math.floor(Math.random() * Object.keys(Face).length / 2))
+            return(Math.floor(Math.random() * Object.keys(Face).length))
         }
     }
     class Column extends PIXI.Sprite{
         private seed = Math.random();
-        private stripLength: number = 5;
+        private stripLength: number = 3;
+        private hiddenPadding: number = 2;
         private speed: number = 20;
 
         private currentSpeed: number = 20;
@@ -79,11 +88,11 @@ export namespace Slots {
         constructor(slot: Slot, length: number = 0, spinSpeed: number = 20) {
             super();
             this.ctx = slot;
-            this.stripLength = length + 2;
+            this.stripLength = length;
             this.speed = spinSpeed;
 
             this.tileArray = []
-            for(let i = 0; i < this.stripLength; i++) {
+            for(let i = 0; i < this.stripLength + this.hiddenPadding; i++) {
                 let tile =  new Tile(Face.JOKER);
                 tile.y = Tile.Size * -i;
                 this.tileArray[i] = tile;
@@ -107,16 +116,25 @@ export namespace Slots {
             this.addChild(tile)
         }
 
-        Spin(resultFaces: Face[]) {
-            this.resultFaces = [...resultFaces];
+        Spin(resultFaces: Face[] | undefined) {
+            if (resultFaces != undefined) {
+                this.resultFaces = [...resultFaces];
+                for(let i = resultFaces.length; i < this.stripLength; i++) {
+                    this.resultFaces[i] = Tile.RandomFace();
+                }
+            } else {
+                for(let i = 0; i < this.stripLength; i++) {
+                    this.resultFaces[i] = Tile.RandomFace();
+                }
+            }
             this.currentSpeed = this.speed;
             this.elapsedTime = 0;
-            //this.currentTile = 0;
-            console.log("spinning")
+            
             this.slotTicker = new PIXI.Ticker();
             this.slotTicker.autoStart = true;
             this.slotTicker.add((delta) => this.UpdateSpin(delta));
-            //this.StopSpin(200);
+
+            return(this.resultFaces)
         }
 
         UpdateSpin(delta: number) {
@@ -125,7 +143,7 @@ export namespace Slots {
             let relativePos = this.position.y
             let tileElapsed = Math.floor((relativePos / Tile.Size));
 
-            if (tileElapsed < (this.targetTiles - this.stripLength + 1)) {
+            if (tileElapsed < (this.targetTiles - this.stripLength - 2 )) {
                 for(let i = 0; i < tileElapsed - this.currentTile; i++) {
                     let tile =  this.GenerateTile(Tile.RandomFace())
                     this.AddTile(tile)
@@ -144,7 +162,7 @@ export namespace Slots {
                         let tile = this.GenerateTile(Tile.RandomFace())
                         this.AddTile(tile)
                     }
-                    while(this.tileArray.length > this.stripLength){
+                    while(this.tileArray.length > this.stripLength + this.hiddenPadding){
                         this.tileArray[0].destroy();
                         this.tileArray.shift()
                     }
@@ -152,7 +170,7 @@ export namespace Slots {
             }
 
             this.currentTile = tileElapsed;
-            if(this.currentTile < this.targetTiles ) {
+            if(this.currentTile < this.targetTiles - this.hiddenPadding) {
                 this.currentSpeed = this.speed * (1.1 - (this.currentTile / this.targetTiles));
             }
             else {
@@ -161,10 +179,14 @@ export namespace Slots {
         }
 
         async StopSpin(){            
-            await Timer.sleep(500);
-            this.targetTiles += this.targetTiles;
             this.currentSpeed = 0;
             this.slotTicker.destroy();
+            this.position.y -= this.position.y % Tile.Size;
+
+            this.tileArray.forEach(element => {
+                element.y += this.position.y
+            });
+            this.position.y = 0;
         }
 
 
@@ -202,8 +224,8 @@ export namespace Slots {
     }
 
     export class Slot extends PIXI.Sprite{
-        private columns: number = 5;
-        private rows: number = 3
+        private columns: number = 3;
+        private rows: number = 3;
         private gap: number = 5;
         private cascadeDelay: number = 150;
 
@@ -211,6 +233,8 @@ export namespace Slots {
         public spinSpeed: number = 50;
 
         private slots: Column[] = [];
+
+        private faces: Face[][] = []
 
         constructor() {
             super();
@@ -220,9 +244,10 @@ export namespace Slots {
             this.on('click', () => {
                 slot.Spin();
             })
-            this.anchor.set(0.5);
+            this.anchor.set(0.5, 0);
             this.x = app.screen.width/2;
-            this.y = app.screen.height/2;
+            this.y = (app.screen.height/2) + (this.rows * Tile.Size / 2);
+            
         }
 
         public get SpinTime() {
@@ -242,12 +267,53 @@ export namespace Slots {
 
 
         async Spin() {
-
-            let faces: Face[] = [Face.JOKER, Face.JOKER, Face.JOKER]
-
             for(let i = 0; i < this.columns; i++) {
-                this.slots[i].Spin(faces);
+                // if (this.faces[i] != null) {
+                //     this.slots[i].Spin(this.faces[i]);
+                // } else {
+                //     this.faces[i] = this.slots[i].Spin([]);
+                // }
+                this.faces[i] = this.slots[i].Spin(this.faces[i]);
+                console.log( this.faces[0], this.faces[1], this.faces[2])
+                
                 await Timer.sleep(this.cascadeDelay);
+            }
+            this.CalculateScore();
+        }
+
+        CalculateScore() {
+            
+
+            for(let row = 0; row < this.rows; row++) {
+                let matched: boolean = true;
+                for(let matches = 0; matches < this.columns; matches++) {
+                    if (this.faces[0][row] == this.faces[matches][row] || this.faces[matches][row] == Face.JOKER)
+                        continue
+                    else {
+                        matched = false;
+                        break
+                    }
+                }
+
+                if (matched) {
+                    console.log("Matched " + row)
+                }
+            }
+
+            if (this.columns == this.rows) {
+                for(let corner = 0; corner < this.rows; corner += (this.rows - 1)) {
+                    let matched: boolean = true;
+                    for(let row = 0; row < this.rows; row ++) {
+                        if(this.faces[corner][0] == this.faces[row][row] || this.faces[row][row] == Face.JOKER) {
+                            continue
+                        }
+                        matched = false;
+                        break
+                    }
+                    if (matched) {
+                        console.log("Matched Corner: " + corner)
+                    }
+                }
             }
         }
     }
@@ -257,5 +323,6 @@ document.getElementById('pixi-container')?.appendChild(app.view);
 
 const slot = new Slots.Slot();
 app.stage.addChild(slot);
+
 
 
