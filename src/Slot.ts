@@ -315,6 +315,8 @@ export namespace Slots {
                 total += rewards.Rewards[i] * rewards.Multiplier;
             }
             rewards.Total = total;
+            
+            this.faces = []
             this.callback.call(this, rewards);
         }
 
@@ -359,13 +361,13 @@ export namespace Slots {
                 let jokerMatch : boolean = false;
                 if (face.every((value) => value === 0)) {
                         tileArray.Matches.push(tilesPos[index]);
-                        tileArray.Rewards.push(Score[Face.JOKER]);
+                        tileArray.Rewards.push(Score[Face.JOKER] * this.rowReward );
                     } else {
                         const matchingFace = face.find((item) => item !== 0);
                         const rowMatched = face.every((value, index, arr) => value === Face.JOKER || value === arr.find((item) => item !== Face.JOKER));
                         if (rowMatched && matchingFace != undefined) {
                             tileArray.Matches.push(tilesPos[index]);
-                            tileArray.Rewards.push(Score[matchingFace]);
+                            tileArray.Rewards.push(Score[matchingFace] * this.rowReward);
                         }
                         
                     }

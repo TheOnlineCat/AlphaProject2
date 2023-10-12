@@ -20,8 +20,6 @@ namespace SlotStage{
 
     let amountInterval: number = 0; //index
 
-    let prize:number = 0;
-
     const slot = new Slots.Slot(ShowReward);
     slot.scale.set(1.2)
     slot.x = app.screen.width/2
@@ -84,7 +82,7 @@ namespace SlotStage{
         fontWeight:"bold"
     })
     rewardText.visible = false
-    rewardText.y += 200
+    rewardText.y -= 200
     rewardText.anchor.set(0.5);
     UIContainer.addChild(rewardText);
 
@@ -101,13 +99,14 @@ namespace SlotStage{
             amountInterval = 0;
         }
 
-        rewardText.text = amounts[amountInterval];
+        amountText.text = amounts[amountInterval];
         slot.rowReward = amounts[amountInterval]/5;
     }
 
 
     async function ShowReward(result: Slots.ResultData) {
         rewardText.text = R.String.Win + result.Total;
+        console.log(result)
         rewardText.visible = true;
 
         await Timer.sleep(2000);
