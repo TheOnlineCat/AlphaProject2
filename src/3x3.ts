@@ -65,18 +65,18 @@ export namespace Slots {
         }
 
         static RandomFace(){
-            return(Math.floor(Math.random() * Object.keys(Face).length))
+            return(Math.floor(Math.random() * Object.keys(Face).length / 2))
         }
     }
     class Column extends PIXI.Sprite{
-        private seed = Math.random();
-        private stripLength: number = 3;
         private hiddenPadding: number = 2;
         private speed: number = 20;
+        private stripLength: number = 3;
+        
 
         private currentSpeed: number = 20;
         private elapsedTime: number = 0;
-        private tileArray : PIXI.Sprite[];
+        private tileArray : Tile[];
         private currentTile: number = 0;
         private targetTiles: number = 50;
         private resultFaces: Face[] = [];
@@ -116,6 +116,9 @@ export namespace Slots {
             this.addChild(tile)
         }
 
+        GetTileAt(index: number): Tile {
+            return(this.tileArray[index - this.hiddenPadding])
+        }
         Spin(resultFaces: Face[] | undefined) {
             if (resultFaces != undefined) {
                 this.resultFaces = [...resultFaces];
@@ -187,6 +190,8 @@ export namespace Slots {
                 element.y += this.position.y
             });
             this.position.y = 0;
+
+            this.ctx.currentSpinning--;
         }
 
 
@@ -231,13 +236,17 @@ export namespace Slots {
 
         public spinTime: number = 5;
         public spinSpeed: number = 50;
+        public currentSpinning: number = 0;
 
         private slots: Column[] = [];
 
         private faces: Face[][] = []
 
         constructor() {
-            super();
+            let texture: PIXI.Texture = Texture.from(`${path}/slot.png`);
+            super(texture);
+            this.scale.set(0.5,0.5);
+
             this.eventMode = 'static';
             this.GenerateColumn();
 
@@ -268,54 +277,91 @@ export namespace Slots {
 
         async Spin() {
             for(let i = 0; i < this.columns; i++) {
-                // if (this.faces[i] != null) {
-                //     this.slots[i].Spin(this.faces[i]);
-                // } else {
-                //     this.faces[i] = this.slots[i].Spin([]);
-                // }
+                this.currentSpinning = 9;
+
                 this.faces[i] = this.slots[i].Spin(this.faces[i]);
-                console.log( this.faces[0], this.faces[1], this.faces[2])
                 
                 await Timer.sleep(this.cascadeDelay);
             }
-            this.CalculateScore();
+            let rewards: ResultData = this.CalculateScore();
+            console.log(rewards.Matches, rewards.Rewards)
+
+            let spinCheck: PIXI.Ticker = new PIXI.Ticker();
+            spinCheck.speed = 0.5;
+            spinCheck.add((delta) => this.SpinCheck(delta, spinCheck));
+            spinCheck.start();
+
         }
 
-        CalculateScore() {
-            
+        SpinCheck(delta:number, spinCheck: PIXI.Ticker){
+            if(this.currentSpinning == 0) {
+                //do code after done
+                console.log("spin Finished")
+                spinCheck.destroy;
+            }
+        }
+
+        CalculateScore(): ResultData {
+            let tileArray: ResultData = {
+                Matches: [],
+                Rewards: []
+            }
+
+            let tilesPos: number[][][] = [];
+            let faces: Face[][] = [];
+
+            for(let corner = 0; corner < this.rows + 1; corner += (this.rows - 1)) {
+                let pos: number[][] = [];
+                let face: Face[] = [];
+
+                for(let row = 0; row < this.rows; row++) {
+                    pos.push([row, Math.abs(corner - row)]);
+                    face.push( this.faces[row][Math.abs(corner - row)])
+                }
+
+                tilesPos.push(pos)
+                faces.push(face)
+            }
 
             for(let row = 0; row < this.rows; row++) {
-                let matched: boolean = true;
-                for(let matches = 0; matches < this.columns; matches++) {
-                    if (this.faces[0][row] == this.faces[matches][row] || this.faces[matches][row] == Face.JOKER)
-                        continue
-                    else {
-                        matched = false;
-                        break
-                    }
+                let jokerMatch : boolean = false
+                let pos: number[][] = [[0, row]];
+                let face: Face[] = [this.faces[0][row]];
+
+                for(let col = 1; col < this.columns; col++) {
+                    pos.push([col, row]);
+                    face.push( this.faces[col][row])
                 }
 
-                if (matched) {
-                    console.log("Matched " + row)
-                }
+                tilesPos.push(pos)
+                faces.push(face)
             }
 
-            if (this.columns == this.rows) {
-                for(let corner = 0; corner < this.rows; corner += (this.rows - 1)) {
-                    let matched: boolean = true;
-                    for(let row = 0; row < this.rows; row ++) {
-                        if(this.faces[corner][0] == this.faces[row][row] || this.faces[row][row] == Face.JOKER) {
-                            continue
+            faces.forEach((face, index) => {
+                let jokerMatch : boolean = false
+                if (face.every((value) => value === 0)) {
+                        jokerMatch = true;
+                        console.log("JOKER MATCH");
+                        tileArray.Matches.push(tilesPos[index])
+                        tileArray.Rewards.push(Score[Face.JOKER])
+                    } else {
+                        const matchingFace = face.find((item) => item !== 0);
+                        const rowMatched = face.every((value, index, arr) => value === Face.JOKER || value === arr.find((item) => item !== Face.JOKER));
+                        if (rowMatched && matchingFace != undefined) {
+                            tileArray.Matches.push(tilesPos[index])
+                            tileArray.Rewards.push(Score[matchingFace])
                         }
-                        matched = false;
-                        break
-                    }
-                    if (matched) {
-                        console.log("Matched Corner: " + corner)
+                        
                     }
                 }
-            }
+            )
+            
+            return(tileArray);
         }
+    }
+    interface ResultData{
+        Matches: number[][][];
+        Rewards: number[]
     }
 }
 
