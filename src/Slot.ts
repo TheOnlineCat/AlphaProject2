@@ -2,12 +2,18 @@ import { Timer } from "./Util";
 import { R } from "./Resource";
 import * as PIXI from 'pixi.js';
 
+const amounts: number[] = [50, 100, 250, 500, 1500, 2500, 5000];
 export namespace Slots {
 
     const Faces = [
         R.Images.Joker,
-        R.Images.Clown,
-        R.Images.Horse
+        R.Images.RedClown,
+        R.Images.BlueClown,
+        R.Images.GreenClown,
+        R.Images.Elephant,
+        R.Images.Tiger,
+        R.Images.Horse,
+        R.Images.Monkey,
     ]
 
     const Multipliers = [
@@ -20,13 +26,23 @@ export namespace Slots {
     enum Face {
         JOKER = 0,
         REDCLOWN = 1,
-        HORSE = 2,
+        BLUECLOWN = 2,
+        GREENCLOWN = 3,
+        ELEPHANT = 4,
+        TIGER = 5,
+        HORSE = 6,
+        MONKEY = 7
+        
     }
 
     const Score: number[] = [
-        1000,
-        500,
-        200
+        250,
+        200,
+        150,
+        50,
+        20,
+        8,
+        4
     ]
 
     class Tile extends PIXI.Sprite{
@@ -223,6 +239,8 @@ export namespace Slots {
             this.anchor.set(0.5);
         }
 
+        public CallBack(ResultData: ResultData) {}
+
 
         async Spin() {
             for(let i = 0; i < this.columns; i++) {
@@ -233,14 +251,14 @@ export namespace Slots {
             this.currentSpinning = this.columns;
         }
 
-        CreateSlots() {
+        protected CreateSlots() {
             let slotContainer = new PIXI.Sprite();
             slotContainer.scale.set(2.11);
             this.GenerateColumn(slotContainer);
             this.addChild(slotContainer);
         }
 
-        CreateFrame() {
+        protected CreateFrame() {
             let texture: PIXI.Texture = PIXI.Texture.from(R.Images.SlotFrame);
             let frame = new PIXI.Sprite(texture);
             frame.anchor.set(0.5, 0.5);
@@ -266,23 +284,25 @@ export namespace Slots {
             }
         }
         
-        protected onSpinDone() {}
+        protected onSpinDone() {
+            this.faces = []
+        }
     }
 
     export class Slot extends BaseSlot{
         //public static spinTime: number = 5;
-        public rowReward: number = 0;
+        public betAmount: number = 10;
 
         protected columns: number = 3;
         public multiplier: number = 1;
+
+        protected faces: Face[][] = [[Face.REDCLOWN], [Face.REDCLOWN], [Face.REDCLOWN]];
         
         
         private multiSlot: BaseSlot;
-        private callback: Function;
 
-        constructor(callback: Function) {
+        constructor() {
             super();
-            this.callback = callback;
 
             this.CreateSlots()
 
@@ -302,12 +322,13 @@ export namespace Slots {
                 
                 await Timer.sleep(this.cascadeDelay);
             }
+
             this.currentSpinning = this.columns + 1;
 
             this.multiSlot.Spin()
         }
 
-        protected onSpinDone() {
+        protected onSpinDone(){
             let rewards: ResultData = this.CalculateMatches();
             rewards.Multiplier = this.multiplier;
             let total: number = 0;
@@ -315,12 +336,14 @@ export namespace Slots {
                 total += rewards.Rewards[i] * rewards.Multiplier;
             }
             rewards.Total = total;
-            
-            this.faces = []
-            this.callback.call(this, rewards);
+
+            super.onSpinDone()
+        
+            this.CallBack(rewards)
         }
 
         private CalculateMatches(): ResultData {
+
             let tileArray: ResultData = {
                 Matches: [],
                 Rewards: [],
@@ -358,16 +381,15 @@ export namespace Slots {
             }
 
             faces.forEach((face, index) => {
-                let jokerMatch : boolean = false;
                 if (face.every((value) => value === 0)) {
                         tileArray.Matches.push(tilesPos[index]);
-                        tileArray.Rewards.push(Score[Face.JOKER] * this.rowReward );
+                        tileArray.Rewards.push(Score[Face.JOKER] * this.betAmount / 5 );
                     } else {
                         const matchingFace = face.find((item) => item !== 0);
                         const rowMatched = face.every((value, index, arr) => value === Face.JOKER || value === arr.find((item) => item !== Face.JOKER));
                         if (rowMatched && matchingFace != undefined) {
                             tileArray.Matches.push(tilesPos[index]);
-                            tileArray.Rewards.push(Score[matchingFace] * this.rowReward);
+                            tileArray.Rewards.push(Score[matchingFace] * this.betAmount / 5);
                         }
                         
                     }
@@ -393,7 +415,7 @@ export namespace Slots {
             this.sortChildren();
         }
 
-        CreateFrame() {
+        protected CreateFrame() {
             let texture: PIXI.Texture = PIXI.Texture.from(R.Images.SlotFrame);
             let frame = new PIXI.Sprite(texture);
             frame.scale.set(0.33, 1)
@@ -414,8 +436,9 @@ export namespace Slots {
         }
 
         protected onSpinDone() {
-            this.ctx.multiplier = this.faces[0][1] + 1
-            this.ctx.onSpinDone()
+            this.ctx.multiplier = this.faces[0][1] + 1;
+            this.ctx.onSpinDone();
+            super.onSpinDone();
         }
 
         
@@ -426,5 +449,155 @@ export namespace Slots {
         Rewards: number[];
         Multiplier: number;
         Total: number;
+    }
+}
+
+export class SlotUI extends PIXI.Sprite{
+    
+    private betAmount: number = 50;
+    private amount: number = 50000;
+    private amountInterval: number = 0; //index
+
+    private amountText!: PIXI.Text;
+    private betText!: PIXI.Text;
+    private rewardPrompt: PIXI.Text;
+    private spinButton: PIXI.Sprite;
+    private amountContainer: PIXI.Sprite;
+
+    constructor() {
+        super()
+        this.anchor.set(0.5);
+
+
+        this.rewardPrompt = this.CreateRewardPrompt();
+        this.addChild(this.rewardPrompt)
+
+        this.amountContainer = this.CreateAmount();
+        this.addChild(this.amountContainer)
+
+        this.spinButton = this.CreateSpinButton()
+        this.addChild(this.spinButton);
+
+        this.addChild(this.CreateAmountUI());
+        
+        this.updateBet(this.amountInterval)
+    }
+
+    public Deduct() {
+        this.amount -= this.betAmount;
+        this.amountText.text =  this.amount;
+    }
+
+    public ButtonCallBack() {}
+
+    // public OnAmountChanged(callback: (amount: number) => void) {
+    //     callback(amounts[this.amountInterval]);
+    // }
+    public OnBetChanged(amount: number) {}
+
+    private CreateAmountUI(): PIXI.Sprite {
+        const betContainer: PIXI.Sprite = new PIXI.Sprite();
+        betContainer.anchor.set(0.5);
+        betContainer.x += 400
+        betContainer.scale.set(0.1);
+
+        const decrementButton: PIXI.Sprite = new PIXI.Sprite(PIXI.Texture.from(R.Images.MinusIcon));
+        decrementButton.anchor.set(0.5);
+        decrementButton.eventMode = 'static';
+        decrementButton.x -= 1500;
+        decrementButton.on('click', () => {
+            this.updateBet(-1)
+        })
+        betContainer.addChild(decrementButton);
+
+        const betText = new PIXI.Text('50', {
+            fontFamily:"Verdana",
+            fontSize:500,
+            fontVariant:"small-caps",
+            fontWeight:"bold"
+        })
+        betText.anchor.set(0.5);
+        this.betText = betText
+        betContainer.addChild(betText);
+
+        const incrementButton: PIXI.Sprite = new PIXI.Sprite(PIXI.Texture.from(R.Images.PlusIcon));
+        incrementButton.anchor.set(0.5);
+        incrementButton.x += 1500;
+        incrementButton.eventMode = 'static';
+        incrementButton.on('click', () => {
+            this.updateBet(1)
+        })
+        betContainer.addChild(incrementButton);
+
+        return(betContainer)
+    }
+
+    private CreateSpinButton(): PIXI.Sprite{
+        const spinButton:PIXI.Sprite = new PIXI.Sprite(PIXI.Texture.from(R.Images.SpinButton));
+        spinButton.scale.set(0.3)
+        spinButton.anchor.set(0.5);
+        spinButton.eventMode = 'static';
+        spinButton.on('click', () => {
+            this.ButtonCallBack();
+        })
+        return(spinButton);
+    }
+
+    private CreateRewardPrompt(): PIXI.Text {
+        const rewardText = new PIXI.Text("", {
+            fontFamily:"Verdana",
+            fontSize:100,
+            fontVariant:"small-caps",
+            fontWeight:"bold"
+        });
+        rewardText.visible = false;
+        rewardText.y -= 200;
+        rewardText.anchor.set(0.5);
+
+        return(rewardText);
+    }
+
+    private CreateAmount() {
+        const amountContainer: PIXI.Sprite = new PIXI.Sprite();
+        amountContainer.anchor.set(0.5);
+        amountContainer.x -= 300;
+        amountContainer.scale.set(0.1);
+
+        const amountText = new PIXI.Text(this.amount, {
+            fontFamily:"Verdana",
+            fontSize:500,
+            fontVariant:"small-caps",
+            fontWeight:"bold"
+        });
+        amountText.anchor.set(0.5);
+        this.amountText = amountText;
+        amountContainer.addChild(amountText);
+
+        return(amountContainer)
+    }
+
+    private updateBet(change: number) {
+        this.amountInterval += change
+
+        if (this.amountInterval > amounts.length - 1) {
+            this.amountInterval = amounts.length - 1;
+        } else if (this.amountInterval < 0) {
+            this.amountInterval = 0;
+        }
+
+        this.betAmount = amounts[this.amountInterval];
+        this.betText.text = this.betAmount;
+        this.OnBetChanged(this.betAmount)
+    }
+
+    async ShowReward(result: Slots.ResultData) {
+        this.rewardPrompt.text = R.String.Win + result.Total;
+        this.rewardPrompt.visible = true;
+        this.amount += result.Total;
+        this.amountText.text =  this.amount;
+
+        await Timer.sleep(4000);
+
+        this.rewardPrompt.visible = false
     }
 }

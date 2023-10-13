@@ -14,8 +14,13 @@ export namespace R.Images {
     export const Multi_4 = `${images}/4x.png`
 
     export const Joker = `${images}/joker.png`
-    export const Clown = `${images}/clown.png`
-    export const Horse = `${images}/horse.jpg`
+    export const RedClown = `${images}/redclown.png`
+    export const BlueClown = `${images}/blueclown.png`
+    export const GreenClown = `${images}/greenclown.png`
+    export const Elephant = `${images}/elephant.png`
+    export const Tiger = `${images}/tiger.png`
+    export const Horse = `${images}/horse.png`
+    export const Monkey = `${images}/monkey.png`
 }
 
 
