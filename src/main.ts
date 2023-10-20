@@ -13,12 +13,12 @@ document.getElementById('pixi-container')?.appendChild(app.view);
 
 
 import { Slots, SlotUI } from "./Slot";
-
-const UI: SlotUI = new SlotUI();
-
-const slot: Slots.Slot = new Slots.Slot();
-
 namespace SlotStage{
+    
+    const UI: SlotUI = new SlotUI();
+
+    const slot: Slots.Slot = new Slots.Slot();
+    
     UI.y = app.screen.height*0.9
     UI.x = app.screen.width/2
     UI.ButtonCallBack = function() {
@@ -30,6 +30,10 @@ namespace SlotStage{
         slot.betAmount = amount
     };
 
+    UI.OnTurboToggle = (bool: Boolean) => {
+        slot.SetTurbo(bool)
+    };
+
     slot.anchor.set(0.5)
     slot.scale.set(1)
     slot.x = app.screen.width/2
@@ -39,7 +43,8 @@ namespace SlotStage{
         console.log(ResultData)
         UI.ShowReward(ResultData);
     }
+
+    app.stage.addChild(slot);
+    app.stage.addChild(UI);
 }
 
-app.stage.addChild(slot);
-app.stage.addChild(UI);

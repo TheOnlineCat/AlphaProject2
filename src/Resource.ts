@@ -7,11 +7,22 @@ export namespace R.Images {
 
     export const PlusIcon = `${images}/plus.png`
     export const MinusIcon = `${images}/minus.png`
+    export const ToggleOn = `${images}/toggleon.png`
+    export const ToggleOff = `${images}/toggleoff.png`
 
     export const Multi_1 = `${images}/1x.png`
     export const Multi_2 = `${images}/2x.png`
     export const Multi_3 = `${images}/3x.png`
-    export const Multi_4 = `${images}/4x.png`
+    export const Multi_5 = `${images}/5x.png`
+    export const Multi_10 = `${images}/10x.png`
+    export const Multi_15 = `${images}/15x.png`
+
+    export const Multi_T2 = `${images}/Turbo2x.png`
+    export const Multi_T3 = `${images}/Turbo3x.png`
+    export const Multi_T5 = `${images}/Turbo5x.png`
+    export const Multi_T10 = `${images}/Turbo10x.png`
+    export const Multi_T15 = `${images}/Turbo15x.png`
+
 
     export const Joker = `${images}/joker.png`
     export const RedClown = `${images}/redclown.png`
@@ -26,6 +37,10 @@ export namespace R.Images {
 
 export namespace R.Strings.English {
     export const Win = "You Won "
+}
+
+export namespace R.Strings.Chinese {
+    export const Win = "NI HAO BING CHILING"
 }
 
 export namespace R{
