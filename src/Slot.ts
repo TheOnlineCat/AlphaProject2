@@ -5,8 +5,10 @@ import * as PIXI from 'pixi.js';
 const amounts: number[] = [50, 100, 250, 500, 1500, 2500, 5000];
 export namespace Slots {
 
+    
+
     const Faces = [
-        R.Images.Joker,
+        R.Images.Wild,
         R.Images.RedClown,
         R.Images.BlueClown,
         R.Images.GreenClown,
@@ -25,7 +27,7 @@ export namespace Slots {
         R.Images.Multi_15,
     ]
 
-    const TurboMultipliers = [
+    const EXMultipliers = [
         R.Images.Multi_T2,
         R.Images.Multi_T3,
         R.Images.Multi_T5,
@@ -65,19 +67,33 @@ export namespace Slots {
         4
     ]
 
-    class Tile extends PIXI.Sprite{
+    class Tile extends PIXI.Container{
         static Size = 80;
-        static Padding = 5;
+        static Padding = 0;
+        static InnerPadding = 10;
 
         face: number;
 
         constructor(face: number, images: any) {
-            let texture: PIXI.Texture = PIXI.Texture.from(images[face]);
-            super(texture)
+            super();
             this.face = face;
-            this.anchor.set(0.5, 0.5)
-            this.height = Tile.Size - Tile.Padding;
-            this.width = Tile.Size - Tile.Padding;
+
+            //let background: PIXI.Texture = PIXI.Texture.from(R.Images.TileFrame)
+            let backgroundSprite = new PIXI.Sprite();
+            backgroundSprite.anchor.set(0.5, 0.5);
+            backgroundSprite.height = Tile.Size - Tile.Padding;
+            backgroundSprite.width = Tile.Size - Tile.Padding;
+
+            let texture: PIXI.Texture = PIXI.Texture.from(images[face]);
+            let tileSprite = new PIXI.Sprite(texture);
+            tileSprite.anchor.set(0.5, 0.5);
+            tileSprite.height = backgroundSprite.height - Tile.InnerPadding;
+            tileSprite.width = backgroundSprite.width - Tile.InnerPadding;
+
+            this.addChild(backgroundSprite);
+            this.addChild(tileSprite);
+            this.height = backgroundSprite.height;
+            this.width = backgroundSprite.width ;
         }
 
         static RandomFace(faceList: any){
@@ -121,6 +137,10 @@ export namespace Slots {
                 this.tileArray[i] = tile;
                 this.addChild(tile);
             }
+        }
+
+        public setSpeed(speed: number) {
+            this.speed = speed;
         }
 
         private GenerateTile(face: Face) {
@@ -247,6 +267,7 @@ export namespace Slots {
 
     export class BaseSlot extends PIXI.Sprite{
         public spinSpeed: number = 50;
+        public isSpinning: boolean = false;
 
         protected faceList: any = Faces;
         protected columns: number = 3;
@@ -264,7 +285,6 @@ export namespace Slots {
 
         public CallBack(ResultData: ResultData) {}
 
-
         async Spin() {
             for(let i = 0; i < this.columns; i++) {
                 this.faces[i] = this.slots[i].Spin(this.faces[i]);
@@ -274,27 +294,41 @@ export namespace Slots {
             this.currentSpinning = this.columns;
         }
 
-        protected CreateSlots() {
+
+        protected CreateSlots() : PIXI.Sprite{
             let slotContainer = new PIXI.Sprite();
-            slotContainer.scale.set(2.11);
+            slotContainer.scale.set(1);
             this.GenerateColumn(slotContainer);
-            this.addChild(slotContainer);
+            return slotContainer;
         }
 
-        protected CreateFrame() {
-            let texture: PIXI.Texture = PIXI.Texture.from(R.Images.SlotFrame);
-            let frame = new PIXI.Sprite(texture);
-            frame.anchor.set(0.5, 0.5);
-            frame.position.set(0,0);
-            frame.zIndex++;
-            this.addChild(frame);
-        }
+        // protected CreateFrame() {
+        //     let texture: PIXI.Texture = PIXI.Texture.from(R.Images.SlotFrame);
+        //     let frame = new PIXI.Sprite(texture);
+        //     frame.anchor.set(0.5, 0.5);
+        //     frame.position.set(0,0);
+        //     frame.zIndex++;
+        //     this.addChild(frame);
+        // }
 
         private GenerateColumn(container:PIXI.Sprite) {
             let startX = -(Tile.Size * this.columns/2);
+            let startY = -(Tile.Size * this.rows/2);
             for(let i = 0; i < this.columns; i++) {
+                const tileFrames = new PIXI.Container
+                for(let y = 0; y < this.rows; y++) {
+                    const tileFrame = PIXI.Sprite.from(R.Images.TileFrame);
+                    tileFrame.y = startY + (Tile.Size/2) + (Tile.Size * y);
+                    tileFrame.height = Tile.Size;
+                    tileFrame.width = Tile.Size;
+                    tileFrame.anchor.set(0.5);
+                    tileFrames.addChild(tileFrame)
+                }
+
                 const column = new Column(this, this.onSlotDone, this.faceList, this.rows, this.spinSpeed);
-                column.position.x = startX + (Tile.Size/2) + (Tile.Size * i);
+                tileFrames.position.x = startX + (Tile.Size * i);
+                column.position.x = startX + (Tile.Size * i);
+                container.addChild(tileFrames);
                 container.addChild(column);
                 this.slots.push(column);
             }
@@ -308,12 +342,15 @@ export namespace Slots {
         }
         
         protected onSpinDone() {
+            this.isSpinning = false;
             this.faces = []
         }
     }
 
     export class Slot extends BaseSlot{
         //public static spinTime: number = 5;
+        public size: {x: number, y: number};
+        public turboSpeed: number = 120;
         public betAmount: number = 50;
 
         protected columns: number = 3;
@@ -327,34 +364,75 @@ export namespace Slots {
         constructor() {
             super();
 
-        
-            this.CreateSlots()
+            const mask = Slot.createMask((this.columns + 1) * Tile.Size, this.rows * Tile.Size);
+            this.mask = mask;
+            this.addChild(mask)
 
-            this.CreateFrame();
+        
+            const slotContainer = this.CreateSlots();
+            this.addChild(slotContainer);
+
+            //this.CreateFrame();
             this.sortChildren();
+
             this.multiSlot = new MultiplierSlot(this);
             this.multiSlot.zIndex ++
 
-            this.addChild(this.multiSlot);
-            this.multiSlot.x += 530;
+            slotContainer.addChild(this.multiSlot);
+            this.multiSlot.x += Math.ceil(this.columns / 2) * (Tile.Size);
+
+            this.size = {x:(this.columns + 1) * Tile.Size, y:this.rows * Tile.Size}
+        }
+
+        static createMask(width: number, height: number) : PIXI.Graphics {
+            let mask = new PIXI.Graphics();
+            mask.beginFill(0xffffff);
+            mask.drawRect(-width / 2, -height / 2, width, height);
+            mask.endFill();
+
+            return mask;
         }
 
 
         async Spin() {
+            if (this.isSpinning) return;
+
+            this.isSpinning = true;
             for(let i = 0; i < this.columns; i++) {
-                this.slots[i].targetTiles = this.slots[0].targetTiles * (1 + (i * 0.15))
+                this.slots[i].setSpeed(this.spinSpeed)
+                this.slots[i].targetTiles = 40;
                 this.faces[i] = this.slots[i].Spin(this.faces[i]);
                 
-                //await Timer.sleep(this.cascadeDelay);
+                await Timer.sleep(this.cascadeDelay);
             }
 
             this.currentSpinning = this.columns + 1;
 
+            this.multiSlot.GetSlot().setSpeed(this.spinSpeed)
+            this.multiSlot.GetSlot().targetTiles = 40;
             this.multiSlot.Spin()
         }
 
-        public SetTurbo(bool: Boolean) {
-            this.multiSlot.SetTurbo(bool);
+        async TurboSpin() {
+            if (this.isSpinning) return;
+
+            this.isSpinning = true;
+            for(let i = 0; i < this.columns; i++) {
+                this.slots[i].setSpeed(this.turboSpeed)
+                this.slots[i].targetTiles = 10;
+                this.faces[i] = this.slots[i].Spin(this.faces[i]);
+            }
+
+            this.currentSpinning = this.columns + 1;
+
+            this.multiSlot.GetSlot().setSpeed(this.turboSpeed)
+            this.multiSlot.GetSlot().targetTiles = 10;
+            this.multiSlot.Spin()
+
+        }
+
+        public SetEX(bool: Boolean) {
+            this.multiSlot.SetEX(bool);
         }
 
 
@@ -437,23 +515,30 @@ export namespace Slots {
 
         protected faces: Face[][] = [];
 
-        private turbo: Boolean = false;
+        private ex: Boolean = false;
         private ctx: any;
 
-        constructor(ctx: any) {
+        constructor(ctx: any){
             super()
             this.ctx = ctx;
-            this.CreateSlots();
-            this.CreateFrame();
+
+            const slotContainer = this.CreateSlots();
+            this.addChild(slotContainer);
+
+            this.CreateFrame()
             this.sortChildren();
         }
 
-        public SetTurbo(bool: Boolean) {
+        public GetSlot() : Column{
+            return this.slots[0]
+        }
+
+        public SetEX(bool: Boolean) {
             if (bool) {
-                this.turbo = bool;
-                this.faceList = TurboMultipliers;
+                this.ex = bool;
+                this.faceList = EXMultipliers;
             } else {
-                this.turbo = bool;
+                this.ex = bool;
                 this.faceList = Multipliers;
             }
 
@@ -461,33 +546,43 @@ export namespace Slots {
                 element.destroy();
             });
             this.slots = [];
-            this.CreateSlots()
+            const slotContainer = this.CreateSlots();
+            this.addChild(slotContainer);
             this.sortChildren();
             
         }
 
         protected CreateFrame() {
-            let texture: PIXI.Texture = PIXI.Texture.from(R.Images.SlotFrame);
-            let frame = new PIXI.Sprite(texture);
-            frame.scale.set(0.33, 1)
-            frame.anchor.set(0.5, 0.5);
-            frame.position.set(0,0);
-            frame.zIndex++;
+            let container = new PIXI.Container
 
-            this.addChild(frame);
+            let texture: PIXI.Texture = PIXI.Texture.from(R.Images.SelectedFrame);
+            let frame = new PIXI.Sprite(texture);
+            frame.height = Tile.Size;
+            frame.width = Tile.Size;
+            frame.anchor.set(0.5);
+            //frame.position.set(0,0);
+
+            container.addChild(frame);
 
             let arrowTexture: PIXI.Texture = PIXI.Texture.from(R.Images.SlotArrow);
             let arrow = new PIXI.Sprite(arrowTexture);
             arrow.anchor.set(0.5);
-            arrow.position.set(-100,0);
-            arrow.scale.set(0.1)
-            arrow.zIndex++;
+            arrow.x = Tile.Size / 2
+            arrow.height = Tile.Size - Tile.InnerPadding;
+            arrow.width = Tile.Size - Tile.InnerPadding;
 
-            this.addChild(arrow);
+            container.addChild(arrow);
+            container.x -= Tile.Size / 2;
+            container.zIndex = 10;
+
+
+            //container.x -= Tile.Size;
+
+            this.addChild(container);
         }
 
         protected onSpinDone() {
-            if (this.turbo) {
+            if (this.ex) {
                 this.ctx.multiplier = MultiplyValue[this.faces[0][1] + 1]
             } else {
                 this.ctx.multiplier = MultiplyValue[this.faces[0][1]];
@@ -511,15 +606,16 @@ export class SlotUI extends PIXI.Sprite{
     private betAmount: number = 50;
     private amount: number = 50000;
     private amountInterval: number = 0; //index
-    private turbo: boolean = false;
+    private ex: boolean = false;
 
     private amountText!: PIXI.Text;
     private betText!: PIXI.Text;
     private rewardPrompt: PIXI.Text;
     private spinButton: PIXI.Sprite;
+    private turboButton: PIXI.Sprite;
     private amountContainer: PIXI.Sprite;
-    private turboToggle: PIXI.Sprite;
-    private turboMultipy: number = 1;
+    private exToggle: PIXI.Sprite;
+    private exMultipy: number = 1;
 
     constructor() {
         super()
@@ -535,8 +631,11 @@ export class SlotUI extends PIXI.Sprite{
         this.spinButton = this.CreateSpinButton()
         this.addChild(this.spinButton);
 
-        this.turboToggle = this.CreateTurboSwitch()
-        this.addChild(this.turboToggle);
+        this.turboButton = this.CreateTurboButton()
+        this.addChild(this.turboButton);
+
+        this.exToggle = this.CreateEXSwitch()
+        this.addChild(this.exToggle);
 
         this.addChild(this.CreateAmountUI());
         
@@ -548,26 +647,41 @@ export class SlotUI extends PIXI.Sprite{
         this.amountText.text =  this.amount;
     }
 
-    public ButtonCallBack() {}
+    public SpinButtonCallBack() {}
+
+    public TurboButtonCallBack() {}
 
     public OnBetChanged(amount: number) {}
 
-    public OnTurboToggle(bool: Boolean) {}
+    public OnEXToggle(bool: Boolean) {}
 
     private CreateAmountUI(): PIXI.Sprite {
         const betContainer: PIXI.Sprite = new PIXI.Sprite();
         betContainer.anchor.set(0.5);
-        betContainer.x += 400
+        betContainer.x += 250
         betContainer.scale.set(0.1);
 
-        const decrementButton: PIXI.Sprite = new PIXI.Sprite(PIXI.Texture.from(R.Images.MinusIcon));
-        decrementButton.anchor.set(0.5);
+        {
+        const background  = new PIXI.Graphics();
+        background.beginFill(R.Colours.Primary);
+        background.drawCircle(0, 0, 50);
+        background.endFill();
+
+        const decrementIcon: PIXI.Sprite = new PIXI.Sprite(PIXI.Texture.from(R.Images.MinusIcon));
+        decrementIcon.anchor.set(0.5);
+        
+        const decrementButton = new PIXI.Container();
         decrementButton.eventMode = 'static';
-        decrementButton.x -= 1500;
         decrementButton.on('click', () => {
             this.updateBet(-1)
         })
+        decrementButton.y -= 600;
+        decrementButton.scale.set(8)
+        decrementButton.addChild(background);
+        decrementButton.addChild(decrementIcon);
+
         betContainer.addChild(decrementButton);
+        }
 
         const betText = new PIXI.Text('50', {
             fontFamily:"Verdana",
@@ -579,54 +693,106 @@ export class SlotUI extends PIXI.Sprite{
         this.betText = betText
         betContainer.addChild(betText);
 
-        const incrementButton: PIXI.Sprite = new PIXI.Sprite(PIXI.Texture.from(R.Images.PlusIcon));
-        incrementButton.anchor.set(0.5);
-        incrementButton.x += 1500;
+
+        {
+        const background  = new PIXI.Graphics();
+        background.beginFill(R.Colours.Primary);
+        background.drawCircle(0, 0, 50);
+        background.endFill();
+
+        const incrementIcon: PIXI.Sprite = new PIXI.Sprite(PIXI.Texture.from(R.Images.PlusIcon));
+        incrementIcon.anchor.set(0.5);
+
+        const incrementButton = new PIXI.Container();
         incrementButton.eventMode = 'static';
         incrementButton.on('click', () => {
             this.updateBet(1)
         })
+        incrementButton.y += 600;
+        incrementButton.scale.set(8)
+        incrementButton.addChild(background);
+        incrementButton.addChild(incrementIcon);
+        
         betContainer.addChild(incrementButton);
+        }
 
         return(betContainer)
     }
 
     private CreateSpinButton(): PIXI.Sprite{
-        const spinButton:PIXI.Sprite = new PIXI.Sprite(PIXI.Texture.from(R.Images.SpinButton));
-        spinButton.scale.set(0.3)
+        const background  = new PIXI.Graphics();
+        background.beginFill(R.Colours.Primary);
+        background.drawCircle(0, 0, 50);
+        background.endFill();
+
+        const textureUp = PIXI.Texture.from(R.Images.SpinButton);
+        const textureDown = PIXI.Texture.from(R.Images.SpinButtonDown);
+
+
+        const spinButton:PIXI.Sprite = new PIXI.Sprite(textureUp);
         spinButton.anchor.set(0.5);
+
+        //const spinButton = new PIXI.Container();
         spinButton.eventMode = 'static';
-        spinButton.on('click', () => {
-            this.ButtonCallBack();
+        spinButton.on('mousedown', () => {
+            spinButton.texture = textureDown;
         })
+        spinButton.on('mouseup', () => {
+            spinButton.texture = textureUp;
+            this.SpinButtonCallBack();
+        })
+        spinButton.scale.set(0.4);
+        //spinButton.addChild(background);
+        //spinButton.addChild(spinIcon);
+
         return(spinButton);
     }
 
-    private CreateTurboSwitch(): PIXI.Sprite {
+    private CreateTurboButton(): PIXI.Sprite {
+
+        const textureUp = PIXI.Texture.from(R.Images.TurboButton);
+        const textureDown = PIXI.Texture.from(R.Images.TurboButtonDown)
+
+        const turboButton:PIXI.Sprite = new PIXI.Sprite(textureUp);
+        turboButton.scale.set(0.15);
+        turboButton.anchor.set(0.5);
+        turboButton.x -= 300;
+        turboButton.eventMode = 'static';
+        turboButton.on('mousedown', () => {
+            turboButton.texture = textureDown;
+        })
+        turboButton.on('mouseup', () => {
+            turboButton.texture = textureUp;
+            this.TurboButtonCallBack();
+        })
+        return(turboButton);
+    }
+
+    private CreateEXSwitch(): PIXI.Sprite {
 
         const textureOff = PIXI.Texture.from(R.Images.ToggleOff);
         const textureOn = PIXI.Texture.from(R.Images.ToggleOn)
 
-        const turboToggle:PIXI.Sprite = new PIXI.Sprite(textureOff);
-        turboToggle.scale.set(0.2);
-        turboToggle.anchor.set(0.5);
-        turboToggle.x -= 200;
-        turboToggle.eventMode = 'static';
-        turboToggle.on('click', () => {
-            console.log("turbo")
-            if(this.turbo){
-                turboToggle.texture = textureOff;
-                this.turboMultipy = 1;
-                this.turbo = false;
+        const exToggle:PIXI.Sprite = new PIXI.Sprite(textureOff);
+        exToggle.scale.set(0.15);
+        exToggle.anchor.set(0.5);
+        exToggle.x -= 200;
+        exToggle.eventMode = 'static';
+        exToggle.on('click', () => {
+            console.log("ex")
+            if(this.ex){
+                exToggle.texture = textureOff;
+                this.exMultipy = 1;
+                this.ex = false;
             } else {
-                turboToggle.texture = textureOn;
-                this.turboMultipy = 1.5;
-                this.turbo = true;
+                exToggle.texture = textureOn;
+                this.exMultipy = 1.5;
+                this.ex = true;
             }
             this.updateBet(0)
-            this.OnTurboToggle(this.turbo);
+            this.OnEXToggle(this.ex);
         })
-        return(turboToggle);
+        return(exToggle);
     }
 
     private CreateRewardPrompt(): PIXI.Text {
@@ -671,7 +837,7 @@ export class SlotUI extends PIXI.Sprite{
             this.amountInterval = 0;
         }
 
-        this.betAmount = amounts[this.amountInterval] * this.turboMultipy;
+        this.betAmount = amounts[this.amountInterval] * this.exMultipy;
         this.betText.text = this.betAmount;
         this.OnBetChanged(this.betAmount)
     }
