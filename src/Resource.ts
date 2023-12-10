@@ -16,8 +16,10 @@ export namespace R.Images {
     export const SpinButtonDown = `${iconImages}/spinButtonDown.png`
     export const TurboButton = `${iconImages}/turboButton.png`
     export const TurboButtonDown = `${iconImages}/turboButtonDown.png`
-    export const PlusIcon = `${iconImages}/add.png`
-    export const MinusIcon = `${iconImages}/minus.png`
+    export const Plus = `${iconImages}/increment.png`
+    export const Minus = `${iconImages}/decrement.png`
+    export const PlusDown = `${iconImages}/incrementDown.png`
+    export const MinusDown = `${iconImages}/decrementDown.png`
     export const ToggleOn = `${iconImages}/exOn.png`
     export const ToggleOff = `${iconImages}/exOff.png`
 
@@ -28,11 +30,11 @@ export namespace R.Images {
     export const Multi_10 = `${multiImages}/10x.png`
     export const Multi_15 = `${multiImages}/15x.png`
 
-    export const Multi_T2 = `${multiImages}/2xEx.png`
-    export const Multi_T3 = `${multiImages}/3xEx.png`
-    export const Multi_T5 = `${multiImages}/5xEx.png`
-    export const Multi_T10 = `${multiImages}/10xEx.png`
-    export const Multi_T15 = `${multiImages}/15xEx.png`
+    export const Multi_EX2 = `${multiImages}/2xEx.png`
+    export const Multi_EX3 = `${multiImages}/3xEx.png`
+    export const Multi_EX5 = `${multiImages}/5xEx.png`
+    export const Multi_EX10 = `${multiImages}/10xEx.png`
+    export const Multi_EX15 = `${multiImages}/15xEx.png`
 
 
     export const Wild = `${tileImages}/wild.png`

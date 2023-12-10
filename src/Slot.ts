@@ -6,7 +6,7 @@ const amounts: number[] = [50, 100, 250, 500, 1500, 2500, 5000];
 export namespace Slots {
 
     
-
+    
     const Faces = [
         R.Images.Wild,
         R.Images.RedClown,
@@ -28,11 +28,11 @@ export namespace Slots {
     ]
 
     const EXMultipliers = [
-        R.Images.Multi_T2,
-        R.Images.Multi_T3,
-        R.Images.Multi_T5,
-        R.Images.Multi_T10,
-        R.Images.Multi_T15,
+        R.Images.Multi_EX2,
+        R.Images.Multi_EX3,
+        R.Images.Multi_EX5,
+        R.Images.Multi_EX10,
+        R.Images.Multi_EX15,
     ]
 
     const MultiplyValue: number[] = [
@@ -71,47 +71,48 @@ export namespace Slots {
         static Size = 80;
         static Padding = 0;
         static InnerPadding = 10;
-
-        face: number;
-
-        constructor(face: number, images: any) {
+    
+        face?: number;
+    
+        constructor(face: number) {
             super();
             this.face = face;
-
-            //let background: PIXI.Texture = PIXI.Texture.from(R.Images.TileFrame)
+        }
+    
+        static async create(face: number, images: any) {
+            let tile = new Tile(face);
             let backgroundSprite = new PIXI.Sprite();
             backgroundSprite.anchor.set(0.5, 0.5);
             backgroundSprite.height = Tile.Size - Tile.Padding;
             backgroundSprite.width = Tile.Size - Tile.Padding;
-
-            let texture: PIXI.Texture = PIXI.Texture.from(images[face]);
+    
+            let texture: PIXI.Texture = await PIXI.Assets.load(images[face]);
             let tileSprite = new PIXI.Sprite(texture);
             tileSprite.anchor.set(0.5, 0.5);
             tileSprite.height = backgroundSprite.height - Tile.InnerPadding;
             tileSprite.width = backgroundSprite.width - Tile.InnerPadding;
-
-            this.addChild(backgroundSprite);
-            this.addChild(tileSprite);
-            this.height = backgroundSprite.height;
-            this.width = backgroundSprite.width ;
+    
+            tile.addChild(backgroundSprite);
+            tile.addChild(tileSprite);
+            tile.height = backgroundSprite.height;
+            tile.width = backgroundSprite.width ;
+            return tile;
         }
-
+    
         static RandomFace(faceList: any){
-            //code logic
-        
             Math.floor(Math.random() * Object.keys(faceList).length)
             return(Math.floor(Math.random() * Object.keys(faceList).length))
         }
     }
 
-    class Column extends PIXI.Sprite{
+    class Column extends PIXI.Container{
         private hiddenPadding: number = 1;
         private speed: number = 20;
         private stripLength: number = 3;
         
         private faceList: any;
         private currentSpeed: number = 20;
-        private tileArray : Tile[];
+        private tileArray : Tile[] = [];
         private currentTile: number = 0;
         public targetTiles: number = 40;
         private resultFaces: Face[] = [];
@@ -128,23 +129,28 @@ export namespace Slots {
             this.faceList = facelist;
             this.stripLength = length;
             this.speed = spinSpeed;
+        }
 
-            this.tileArray = []
-            let startPosition = (Tile.Size * this.hiddenPadding);
-            for(let i = 0; i < this.stripLength + this.hiddenPadding; i++) {
-                let tile =  new Tile(Tile.RandomFace(this.faceList), this.faceList);
-                tile.y = startPosition - (Tile.Size * i);
-                this.tileArray[i] = tile;
-                this.addChild(tile);
+        public static async create(ctx: any, callback: Function, facelist: any, length: number = 0, spinSpeed: number = 20) {
+            const instance = new Column(ctx, callback, facelist, length, spinSpeed)
+
+            let startPosition = (Tile.Size * instance.hiddenPadding);
+            for(let i = 0; i < instance.stripLength + instance.hiddenPadding; i++) {
+                let tile = await Tile.create(Tile.RandomFace(instance.faceList), instance.faceList);
+                tile.y = (Tile.Size * i + 1);
+                instance.tileArray[i] = tile;
+                instance.addChild(tile);
             }
+
+            return instance;
         }
 
         public setSpeed(speed: number) {
             this.speed = speed;
         }
 
-        private GenerateTile(face: Face) {
-            let tile =  new Tile(face, this.faceList);
+        private async GenerateTile(face: Face) {
+            let tile = await Tile.create(face, this.faceList);
             tile.y = this.tileArray[this.tileArray.length - 1].position.y - Tile.Size;
             return(tile);
         }
@@ -179,7 +185,7 @@ export namespace Slots {
             return([...this.resultFaces]);
         }
 
-        UpdateSpin(delta: number) {
+        async UpdateSpin(delta: number) {
             this.y += delta * this.currentSpeed;
 
             let relativePos = this.position.y;
@@ -187,7 +193,7 @@ export namespace Slots {
 
             if (tileElapsed < (this.targetTiles - this.stripLength - this.hiddenPadding)) {
                 for(let i = 0; i < tileElapsed - this.currentTile; i++) {
-                    let tile =  this.GenerateTile(Tile.RandomFace(this.faceList));
+                    let tile = await this.GenerateTile(Tile.RandomFace(this.faceList));
                     this.AddTile(tile);
                 }
             }
@@ -195,13 +201,13 @@ export namespace Slots {
                 for(let i = 0; i < tileElapsed - this.currentTile; i++)  {
                     let face = this.resultFaces.shift();
                     if (face != undefined) {
-                        let tile = (this.GenerateTile(face));
+                        let tile = await (this.GenerateTile(face));
                         this.addChild(tile);
                         this.tileArray.push(tile);
                         this.addChild(tile);
                     }
                     else {
-                        let tile = this.GenerateTile(Tile.RandomFace(this.faceList));
+                        let tile = await this.GenerateTile(Tile.RandomFace(this.faceList));
                         this.AddTile(tile);
                     }
                     while(this.tileArray.length > this.stripLength + this.hiddenPadding){
@@ -232,40 +238,9 @@ export namespace Slots {
 
             this.callback.call(this.ctx);
         }
-
-
-        // NatualUpdateSpin(delta: number) {
-        //     this.y += delta * this.currentSpeed;
-            
-        //     let relativePos = (this.position.y);
-        //     let tileElapsed = Math.floor((relativePos / Tile.Size));
-
-        //     if (tileElapsed > this.currentTile) {
-        //         for(let i = 0; i < tileElapsed - this.currentTile; i++) {
-        //             let tile =  this.GenerateTile(Tile.RandomFace())
-        //             this.addChild(tile);
-        //             this.tileArray.push(tile);
-        //             this.tileArray[0].destroy();
-        //             this.tileArray.shift();
-        //         }
-        //         this.currentTile = tileElapsed;
-        //     }
-        // }    
-
-        // async NaturalStopSpin(freq: number){
-        //     let totalTime = Slot.spinTime * 1000;
-        //     while(this.elapsedTime < totalTime) {
-        //         this.elapsedTime += freq;
-        //         this.currentSpeed = this.speed *  (1 - (this.elapsedTime / totalTime));  
-                
-        //         await Timer.sleep(freq);
-        //     }
-
-        //     this.currentSpeed = 0;
-        // }
     }
 
-    export class BaseSlot extends PIXI.Sprite{
+    export class BaseSlot extends PIXI.Container{
         public spinSpeed: number = 50;
         public isSpinning: boolean = false;
 
@@ -280,7 +255,7 @@ export namespace Slots {
 
         constructor() {
             super();
-            this.anchor.set(0.5);
+            //this.anchor.set(0.5);
         }
 
         public CallBack(ResultData: ResultData) {}
@@ -295,10 +270,9 @@ export namespace Slots {
         }
 
 
-        protected CreateSlots() : PIXI.Sprite{
+        protected async CreateSlots() : Promise<PIXI.Sprite>{
             let slotContainer = new PIXI.Sprite();
-            slotContainer.scale.set(1);
-            this.GenerateColumn(slotContainer);
+            await this.GenerateColumn(slotContainer);
             return slotContainer;
         }
 
@@ -311,21 +285,23 @@ export namespace Slots {
         //     this.addChild(frame);
         // }
 
-        private GenerateColumn(container:PIXI.Sprite) {
+        private async GenerateColumn(container:PIXI.Sprite) {
             let startX = -(Tile.Size * this.columns/2);
             let startY = -(Tile.Size * this.rows/2);
             for(let i = 0; i < this.columns; i++) {
                 const tileFrames = new PIXI.Container
                 for(let y = 0; y < this.rows; y++) {
-                    const tileFrame = PIXI.Sprite.from(R.Images.TileFrame);
+                    const texture = await PIXI.Assets.load(R.Images.TileFrame);
+                    const tileFrame = PIXI.Sprite.from(texture);
                     tileFrame.y = startY + (Tile.Size/2) + (Tile.Size * y);
                     tileFrame.height = Tile.Size;
                     tileFrame.width = Tile.Size;
                     tileFrame.anchor.set(0.5);
                     tileFrames.addChild(tileFrame)
                 }
+                
 
-                const column = new Column(this, this.onSlotDone, this.faceList, this.rows, this.spinSpeed);
+                const column = await Column.create(this, this.onSlotDone, this.faceList, this.rows, this.spinSpeed);
                 tileFrames.position.x = startX + (Tile.Size * i);
                 column.position.x = startX + (Tile.Size * i);
                 container.addChild(tileFrames);
@@ -349,7 +325,7 @@ export namespace Slots {
 
     export class Slot extends BaseSlot{
         //public static spinTime: number = 5;
-        public size: {x: number, y: number};
+        public size?: {x: number, y: number};
         public turboSpeed: number = 120;
         public betAmount: number = 50;
 
@@ -359,29 +335,32 @@ export namespace Slots {
         protected faces: Face[][] = [
         ];
         
-        private multiSlot: MultiplierSlot;
+        private multiSlot?: MultiplierSlot;
 
         constructor() {
             super();
 
-            const mask = Slot.createMask((this.columns + 1) * Tile.Size, this.rows * Tile.Size);
-            this.mask = mask;
-            this.addChild(mask)
+        }
 
-        
-            const slotContainer = this.CreateSlots();
-            this.addChild(slotContainer);
+        public static async create(columns: number = 3, rows: number = 3) {
+            const instance = new Slot(); // replace YourClass with the name of your class
 
-            //this.CreateFrame();
-            this.sortChildren();
+            const mask = Slot.createMask((columns + 1) * Tile.Size, rows * Tile.Size);
+            instance.mask = mask;
+            instance.addChild(mask)
 
-            this.multiSlot = new MultiplierSlot(this);
-            this.multiSlot.zIndex ++
+            const slotContainer = await instance.CreateSlots();
+            instance.addChild(slotContainer);
 
-            slotContainer.addChild(this.multiSlot);
-            this.multiSlot.x += Math.ceil(this.columns / 2) * (Tile.Size);
+            instance.sortChildren();
 
-            this.size = {x:(this.columns + 1) * Tile.Size, y:this.rows * Tile.Size}
+            instance.multiSlot = await MultiplierSlot.create(instance);
+            instance.multiSlot.zIndex ++
+
+            slotContainer.addChild(instance.multiSlot);
+            instance.multiSlot.x += Math.ceil(columns / 2) * (Tile.Size);
+
+            return instance;
         }
 
         static createMask(width: number, height: number) : PIXI.Graphics {
@@ -408,9 +387,9 @@ export namespace Slots {
 
             this.currentSpinning = this.columns + 1;
 
-            this.multiSlot.GetSlot().setSpeed(this.spinSpeed)
-            this.multiSlot.GetSlot().targetTiles = 40;
-            this.multiSlot.Spin()
+            this.multiSlot!!.GetSlot().setSpeed(this.spinSpeed)
+            this.multiSlot!!.GetSlot().targetTiles = 40;
+            this.multiSlot!!.Spin()
         }
 
         async TurboSpin() {
@@ -425,14 +404,14 @@ export namespace Slots {
 
             this.currentSpinning = this.columns + 1;
 
-            this.multiSlot.GetSlot().setSpeed(this.turboSpeed)
-            this.multiSlot.GetSlot().targetTiles = 10;
-            this.multiSlot.Spin()
+            this.multiSlot!!.GetSlot().setSpeed(this.turboSpeed)
+            this.multiSlot!!.GetSlot().targetTiles = 10;
+            this.multiSlot!!.Spin()
 
         }
 
         public SetEX(bool: Boolean) {
-            this.multiSlot.SetEX(bool);
+            this.multiSlot!!.SetEX(bool);
         }
 
 
@@ -500,7 +479,6 @@ export namespace Slots {
                             tileArray.Matches.push(tilesPos[index]);
                             tileArray.Rewards.push(Score[matchingFace] * this.betAmount / 5);
                         }
-                        
                     }
                 }
             )
@@ -521,19 +499,26 @@ export namespace Slots {
         constructor(ctx: any){
             super()
             this.ctx = ctx;
-
-            const slotContainer = this.CreateSlots();
-            this.addChild(slotContainer);
-
-            this.CreateFrame()
-            this.sortChildren();
         }
+
+        public static async create(ctx: any) : Promise<MultiplierSlot> {
+            const instance = new MultiplierSlot(ctx)
+
+            const slotContainer = await instance.CreateSlots();
+            instance.addChild(slotContainer);
+
+            instance.CreateFrame()
+            instance.sortChildren();
+
+            return instance
+        }
+
 
         public GetSlot() : Column{
             return this.slots[0]
         }
 
-        public SetEX(bool: Boolean) {
+        public async SetEX(bool: Boolean) {
             if (bool) {
                 this.ex = bool;
                 this.faceList = EXMultipliers;
@@ -546,16 +531,16 @@ export namespace Slots {
                 element.destroy();
             });
             this.slots = [];
-            const slotContainer = this.CreateSlots();
+            const slotContainer = await this.CreateSlots();
             this.addChild(slotContainer);
             this.sortChildren();
             
         }
 
-        protected CreateFrame() {
+        protected async CreateFrame() {
             let container = new PIXI.Container
 
-            let texture: PIXI.Texture = PIXI.Texture.from(R.Images.SelectedFrame);
+            let texture: PIXI.Texture = await PIXI.Assets.load(R.Images.SelectedFrame);
             let frame = new PIXI.Sprite(texture);
             frame.height = Tile.Size;
             frame.width = Tile.Size;
@@ -564,7 +549,7 @@ export namespace Slots {
 
             container.addChild(frame);
 
-            let arrowTexture: PIXI.Texture = PIXI.Texture.from(R.Images.SlotArrow);
+            let arrowTexture: PIXI.Texture =  await PIXI.Assets.load(R.Images.SlotArrow);
             let arrow = new PIXI.Sprite(arrowTexture);
             arrow.anchor.set(0.5);
             arrow.x = Tile.Size / 2
@@ -601,7 +586,7 @@ export namespace Slots {
     }
 }
 
-export class SlotUI extends PIXI.Sprite{
+export class SlotUI extends PIXI.Container{
     
     private betAmount: number = 50;
     private amount: number = 50000;
@@ -613,33 +598,36 @@ export class SlotUI extends PIXI.Sprite{
     private rewardPrompt: PIXI.Text;
     private spinButton: PIXI.Sprite;
     private turboButton: PIXI.Sprite;
-    private amountContainer: PIXI.Sprite;
+    private amountContainer: PIXI.Container;
     private exToggle: PIXI.Sprite;
     private exMultipy: number = 1;
 
     constructor() {
         super()
-        this.anchor.set(0.5);
-
-
-        this.rewardPrompt = this.CreateRewardPrompt();
-        this.addChild(this.rewardPrompt)
 
         this.amountContainer = this.CreateAmount();
         this.addChild(this.amountContainer)
 
+        const buttonContainer = new PIXI.Container;
+
+        this.rewardPrompt = this.CreateRewardPrompt();
+        buttonContainer.addChild(this.rewardPrompt)
+
         this.spinButton = this.CreateSpinButton()
-        this.addChild(this.spinButton);
+        buttonContainer.addChild(this.spinButton);
 
         this.turboButton = this.CreateTurboButton()
-        this.addChild(this.turboButton);
+        buttonContainer.addChild(this.turboButton);
 
         this.exToggle = this.CreateEXSwitch()
-        this.addChild(this.exToggle);
+        buttonContainer.addChild(this.exToggle);
 
-        this.addChild(this.CreateAmountUI());
+        const amountUI = this.CreateAmountUI()
+        buttonContainer.addChild(amountUI);
         
-        this.updateBet(this.amountInterval)
+        buttonContainer.y += 150
+        buttonContainer.scale.set(0.8);
+        this.addChild(buttonContainer)
     }
 
     public Deduct() {
@@ -655,66 +643,44 @@ export class SlotUI extends PIXI.Sprite{
 
     public OnEXToggle(bool: Boolean) {}
 
-    private CreateAmountUI(): PIXI.Sprite {
-        const betContainer: PIXI.Sprite = new PIXI.Sprite();
-        betContainer.anchor.set(0.5);
-        betContainer.x += 250
-        betContainer.scale.set(0.1);
+    private CreateAmountUI(): PIXI.Container {
+        const betContainer: PIXI.Container = new PIXI.Container();
+        betContainer.x += 200
 
-        {
-        const background  = new PIXI.Graphics();
-        background.beginFill(R.Colours.Primary);
-        background.drawCircle(0, 0, 50);
-        background.endFill();
+        PIXI.Assets.load([R.Images.Plus, R.Images.PlusDown]).then( (textures) => {
+            const incrementButton = new PIXI.Sprite(textures[R.Images.Plus])
+            incrementButton.anchor.set(0.5);
+            incrementButton.eventMode = 'static';
+            incrementButton.on('mousedown', () => {
+                incrementButton.texture = textures[R.Images.PlusDown]
+            })
+            incrementButton.on('mouseup', () => {
+                incrementButton.texture = textures[R.Images.Plus]
+                this.updateBet(1)
+            })
+            incrementButton.y -= 50;
+            incrementButton.scale.set(0.17);
 
-        const decrementIcon: PIXI.Sprite = new PIXI.Sprite(PIXI.Texture.from(R.Images.MinusIcon));
-        decrementIcon.anchor.set(0.5);
-        
-        const decrementButton = new PIXI.Container();
-        decrementButton.eventMode = 'static';
-        decrementButton.on('click', () => {
-            this.updateBet(-1)
+            betContainer.addChild(incrementButton);
         })
-        decrementButton.y -= 600;
-        decrementButton.scale.set(8)
-        decrementButton.addChild(background);
-        decrementButton.addChild(decrementIcon);
 
-        betContainer.addChild(decrementButton);
-        }
 
-        const betText = new PIXI.Text('50', {
-            fontFamily:"Verdana",
-            fontSize:500,
-            fontVariant:"small-caps",
-            fontWeight:"bold"
+        PIXI.Assets.load([R.Images.Minus, R.Images.MinusDown]).then( (textures) => {
+            const decrementButton = new PIXI.Sprite(textures[R.Images.Minus])
+            decrementButton.anchor.set(0.5);
+            decrementButton.eventMode = 'static';
+            decrementButton.on('mousedown', () => {
+                decrementButton.texture = textures[R.Images.MinusDown]
+            })
+            decrementButton.on('mouseup', () => {
+                decrementButton.texture = textures[R.Images.Minus]
+                this.updateBet(-1)
+            })
+            decrementButton.y += 50;
+            decrementButton.scale.set(0.17);
+
+            betContainer.addChild(decrementButton);
         })
-        betText.anchor.set(0.5);
-        this.betText = betText
-        betContainer.addChild(betText);
-
-
-        {
-        const background  = new PIXI.Graphics();
-        background.beginFill(R.Colours.Primary);
-        background.drawCircle(0, 0, 50);
-        background.endFill();
-
-        const incrementIcon: PIXI.Sprite = new PIXI.Sprite(PIXI.Texture.from(R.Images.PlusIcon));
-        incrementIcon.anchor.set(0.5);
-
-        const incrementButton = new PIXI.Container();
-        incrementButton.eventMode = 'static';
-        incrementButton.on('click', () => {
-            this.updateBet(1)
-        })
-        incrementButton.y += 600;
-        incrementButton.scale.set(8)
-        incrementButton.addChild(background);
-        incrementButton.addChild(incrementIcon);
-        
-        betContainer.addChild(incrementButton);
-        }
 
         return(betContainer)
     }
@@ -741,7 +707,7 @@ export class SlotUI extends PIXI.Sprite{
             spinButton.texture = textureUp;
             this.SpinButtonCallBack();
         })
-        spinButton.scale.set(0.4);
+        spinButton.scale.set(0.3);
         //spinButton.addChild(background);
         //spinButton.addChild(spinIcon);
 
@@ -754,9 +720,9 @@ export class SlotUI extends PIXI.Sprite{
         const textureDown = PIXI.Texture.from(R.Images.TurboButtonDown)
 
         const turboButton:PIXI.Sprite = new PIXI.Sprite(textureUp);
-        turboButton.scale.set(0.15);
+        turboButton.scale.set(0.17);
         turboButton.anchor.set(0.5);
-        turboButton.x -= 300;
+        turboButton.x -= 250;
         turboButton.eventMode = 'static';
         turboButton.on('mousedown', () => {
             turboButton.texture = textureDown;
@@ -774,12 +740,11 @@ export class SlotUI extends PIXI.Sprite{
         const textureOn = PIXI.Texture.from(R.Images.ToggleOn)
 
         const exToggle:PIXI.Sprite = new PIXI.Sprite(textureOff);
-        exToggle.scale.set(0.15);
+        exToggle.scale.set(0.17);
         exToggle.anchor.set(0.5);
-        exToggle.x -= 200;
+        exToggle.x -= 150;
         exToggle.eventMode = 'static';
         exToggle.on('click', () => {
-            console.log("ex")
             if(this.ex){
                 exToggle.texture = textureOff;
                 this.exMultipy = 1;
@@ -809,21 +774,34 @@ export class SlotUI extends PIXI.Sprite{
         return(rewardText);
     }
 
-    private CreateAmount() {
-        const amountContainer: PIXI.Sprite = new PIXI.Sprite();
-        amountContainer.anchor.set(0.5);
-        amountContainer.x -= 450;
-        amountContainer.scale.set(0.1);
+    private CreateAmount() : PIXI.Container{
+        const amountContainer: PIXI.Container = new PIXI.Container();
+
 
         const amountText = new PIXI.Text(this.amount, {
             fontFamily:"Verdana",
-            fontSize:500,
+            fontSize:24,
             fontVariant:"small-caps",
             fontWeight:"bold"
         });
         amountText.anchor.set(0.5);
+        amountText.x -= 250;
         this.amountText = amountText;
         amountContainer.addChild(amountText);
+
+
+        const betText = new PIXI.Text('50', {
+            fontFamily:"Verdana",
+            fontSize:24,
+            fontVariant:"small-caps",
+            fontWeight:"bold"
+        })
+        betText.anchor.set(0.5);
+        betText.x += 250
+        this.betText = betText
+        amountContainer.addChild(betText);
+        
+        this.updateBet(this.amountInterval)
 
         return(amountContainer)
     }
@@ -851,5 +829,9 @@ export class SlotUI extends PIXI.Sprite{
         await Timer.sleep(4000);
 
         this.rewardPrompt.visible = false
+    }
+
+    public GetSpinButtonAbsXPos(){
+        return (this.spinButton.position.x + this.position.x)
     }
 }
