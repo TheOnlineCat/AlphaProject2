@@ -11,6 +11,14 @@ export namespace R.Images {
     export const SlotArrow = `${uiImages}/arrow.png`
     export const Background = `${uiImages}/background.png`
     export const SelectedFrame = `${uiImages}/selected.png`
+    export const Title = `${uiImages}/title.png`
+    export const BetFrame = `${uiImages}/betFrame.png`
+    export const WinFrame = `${uiImages}/winFrame.png`
+    export const BigWin = `${uiImages}/bigwin.png`
+    export const MegaWin = `${uiImages}/megawin.png`
+    export const SuperWin = `${uiImages}/superwin.png`
+    export const TileOverlay = `${uiImages}/reel cover frame.png`
+
 
     export const SpinButton = `${iconImages}/spinButton.png`
     export const SpinButtonDown = `${iconImages}/spinButtonDown.png`
@@ -22,6 +30,10 @@ export namespace R.Images {
     export const MinusDown = `${iconImages}/decrementDown.png`
     export const ToggleOn = `${iconImages}/exOn.png`
     export const ToggleOff = `${iconImages}/exOff.png`
+    export const Logout = `${iconImages}/logout.png`
+    export const Chip = `${iconImages}/casino-chip.png`
+    export const Settings = `${iconImages}/management.png`
+
 
     export const Multi_1 = `${multiImages}/1x.png`
     export const Multi_2 = `${multiImages}/2x.png`
@@ -51,6 +63,12 @@ export namespace R.Colours {
     export const Primary = 0x662413
 }
 
+export namespace R.Constants {
+    export const BIG_WIN_AMOUNT = 100
+    export const MEGA_WIN_AMOUNT = 200
+    export const SUPER_WIN_AMOUNT = 300
+}
+
 
 export namespace R.Strings.English {
     export const Win = "You Won "
@@ -60,7 +78,8 @@ export namespace R.Strings.Chinese {
     export const Win = "NI HAO BING CHILING"
 }
 
+
 export namespace R{
     export const String = R.Strings.English;
-    
+    export const Font = "./resources/fonts/TUIVEN_Trial.ttf"
 }
