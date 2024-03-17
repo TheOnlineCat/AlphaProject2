@@ -1070,8 +1070,8 @@ export class SlotUI extends PIXI.Container{
         const winContainter = new PIXI.Container();
 
         //const winBackground = PIXI.Sprite.from(await PIXI.Assets.load(R.Images.WinFrame))
-        const winBackground = Draw.PillShape(300, 50, 0x964B00);
-        winContainter.addChild(winBackground)
+        //const winBackground = Draw.PillShape(300, 50, 0x964B00);
+        //winContainter.addChild(winBackground)
         
 
         const winText = new PIXI.Text("0", {
@@ -1081,7 +1081,13 @@ export class SlotUI extends PIXI.Container{
             fontWeight:"bold"
         });
         winText.anchor.set(0.5);
-        winText.position.set(winBackground.width/2, winBackground.height/2);
+
+        PIXI.Assets.load(R.Images.WinFrame).then(R.Images.WinFrame)=> {
+            const winBackground = PIXI.Sprite.from(R.Images.WinFrame)         
+            winContainter.addChild(winBackground)
+            winText.position.set(winBackground.width/2, winBackground.height/2);
+        }
+
         
         
         this.winText = winText;
