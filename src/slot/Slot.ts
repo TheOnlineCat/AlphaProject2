@@ -752,7 +752,7 @@ export class SlotUI extends PIXI.Container{
         //instance.rewardPrompt = await instance.CreateRewardPrompt();
         //instance.addChild(instance.rewardPrompt)
 
-        instance.amountContainer = instance.CreateAmount();
+        instance.amountContainer = await instance.CreateAmount();
         instance.amountContainer.scale.set(
             Math.max(Math.abs(buttonContainer.getBounds().left * 2), Math.abs(buttonContainer.getBounds().right * 2)) / instance.amountContainer.width
             );
@@ -1064,52 +1064,53 @@ export class SlotUI extends PIXI.Container{
         return(rewardPromptContainer);
     }
 
-    private CreateAmount() : PIXI.Container{
+    private async CreateAmount() : Promise<PIXI.Container>{
         const amountContainer: PIXI.Container = new PIXI.Container();
 
         const winContainter = new PIXI.Container();
 
-        //const winBackground = PIXI.Sprite.from(await PIXI.Assets.load(R.Images.WinFrame))
-        //const winBackground = Draw.PillShape(300, 50, 0x964B00);
-        //winContainter.addChild(winBackground)
         
+        // const winBackground = Draw.PillShape(300, 50, 0x964B00);
+        
+
+        
+        
+        
+        const winBackground = PIXI.Sprite.from(await PIXI.Assets.load(R.Images.WinFrame))
+        winContainter.addChild(winBackground)
 
         const winText = new PIXI.Text("0", {
             fontFamily: R.Font,
             fontSize:42,
+            fill: "#ffffff",
             fontVariant:"small-caps",
             fontWeight:"bold"
         });
         winText.anchor.set(0.5);
 
-        PIXI.Assets.load(R.Images.WinFrame).then(R.Images.WinFrame)=> {
-            const winBackground = PIXI.Sprite.from(R.Images.WinFrame)         
-            winContainter.addChild(winBackground)
-            winText.position.set(winBackground.width/2, winBackground.height/2);
-        }
-
-        
+        winText.position.set(winBackground.width/2, winBackground.height/2);
         
         this.winText = winText;
         winContainter.addChild(winText);
 
-        winContainter.x = -350;
+        winContainter.x = -350; 
 
         const betContainer = new PIXI.Container();
 
-        //const betBackground = PIXI.Sprite.from(await PIXI.Assets.load(R.Images.BetFrame))
-        const betBackground = Draw.PillShape(200, 50, 0x964B00);
+        const betBackground = PIXI.Sprite.from(await PIXI.Assets.load(R.Images.BetFrame))
+        // const betBackground = Draw.PillShape(200, 50, 0x964B00);
         //betBackground.pivot(betBackground.width/2, betBackground.height/2);
         betContainer.addChild(betBackground)
 
         const betText = new PIXI.Text('50', {
             fontFamily: R.Font,
             fontSize:42,
+            fill: "#ffffff",
             fontVariant:"small-caps",
             fontWeight:"bold"
         })
         betText.anchor.set(0.5);
-        betText.position.set(betBackground.width/2, betBackground.height/2);
+        betText.position.set(betBackground.width/2 + 45, betBackground.height/2);
         this.betText = betText
         betContainer.addChild(betText);
         betContainer.pivot.set(betContainer.width, 0)

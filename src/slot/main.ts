@@ -374,14 +374,25 @@ namespace SlotStage{
         contentContainer.addChild(mainUI);
 
 
-        // const title = PIXI.Sprite.from(await PIXI.Assets.load(R.Images.Title));
+        const title = PIXI.Sprite.from(await PIXI.Assets.load(R.Images.Title));
+        title.anchor.set(0.5, 0.5);
+        contentContainer.addChild(title);
+
+        const slotLeft = slot.getGlobalPosition().x - gameStage.width/2
+        const slotRight = mainUI.getGlobalPosition().x + gameStage.width/2
+
+        title.position.set(0, -(((title.height / slot.height) + 20) * 0.62))
+
+        const scaleTitle = (slotRight-slotLeft)/title.width
+        title.scale.set(scaleTitle);
+
         // const slotTop = slot.getGlobalPosition().y - slot.height/2
         // const uiBottom = mainUI.getGlobalPosition().y - mainUI.height/2
+
 
         // const scaleTitle = (slotTop-uiBottom)/title.height
         // title.scale.set(scaleTitle);
         // title.anchor.set(0.5, 0);
-        // contentContainer.addChild(title);
         // console.log(slot.getGlobalPosition().y, slot.getGlobalPosition().y - slot.height/2 + title.y)
         // title.y = mainUI.getGlobalPosition().y - title.getGlobalPosition().y
         
