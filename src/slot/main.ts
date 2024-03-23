@@ -210,11 +210,11 @@ namespace SlotStage{
     
         for (let image of images) {
             PIXI.Assets.add({alias: image, src: image});
-            PIXI.Assets.load(image);
+            PIXI.Assets.load(image).catch((rs) => {});
         }
         for (let sound of sounds) {
             PIXI.Assets.add({alias: sound, src: sound, loadParser: soundAsset});
-            PIXI.Assets.backgroundLoad(sound);
+            PIXI.Assets.backgroundLoad(sound).catch((rs) => {});
         }
         PIXI.Assets.add({alias: R.Font, src: R.Font});
     }
@@ -252,11 +252,11 @@ namespace SlotStage{
         await preloadAssets()
 
 
-        // PIXI.Assets.load(R.Sounds.Background).then(sound => {
-        //     sound.loop = true;
-        //     sound.volume = 0.25;
-        //     sound.play()
-        // });
+        PIXI.Assets.load(R.Sounds.Background).then(sound => {
+            sound.loop = true;
+            sound.volume = 0.25;
+            sound.play()
+        }).catch((rs) => {});
         
         
         
@@ -362,13 +362,18 @@ namespace SlotStage{
                     mainUI.add(ResultData.Total)
                     PIXI.Assets.load(R.Sounds.Win).then(sound => {
                         sound.play()
-                    });
+                    }).catch((rs) => {});
                 }
             }
         }
         gameStage.addChild(UI);
 
-        let scaleX = background.width/gameStage.width;
+        const title = PIXI.Sprite.from(await PIXI.Assets.load(R.Images.Title));
+        title.anchor.set(0.502, 0.52);
+        title.scale.set(gameStage.width/title.width)
+        gameStage.addChild(title);
+
+        let scaleX = contentContainer.width/gameStage.width;
         gameStage.scale.set(scaleX)
 
         contentContainer.addChild(gameStage);
@@ -376,17 +381,18 @@ namespace SlotStage{
         contentContainer.addChild(mainUI);
 
 
-        const title = PIXI.Sprite.from(await PIXI.Assets.load(R.Images.Title));
-        title.anchor.set(0.5, 0.5);
-        contentContainer.addChild(title);
+        
 
-        const slotLeft = slot.getGlobalPosition().x - gameStage.width/2
-        const slotRight = mainUI.getGlobalPosition().x + gameStage.width/2
+        // const slotLeft = slot.getGlobalPosition().x - gameStage.width/2
+        // const slotRight = mainUI.getGlobalPosition().x + gameStage.width/2
 
-        title.position.set(0, -(((title.height / slot.height) + 20) * 0.62))
+        // // title.position.set(0, -(((title.height / slot.height) + 20) * 0.62))
 
-        const scaleTitle = (slotRight-slotLeft)/title.width
-        title.scale.set(scaleTitle);
+        // const scaleTitle = (slotRight-slotLeft)/title.width
+        // title.scale.set(scaleTitle);
+
+
+
 
         // const slotTop = slot.getGlobalPosition().y - slot.height/2
         // const uiBottom = mainUI.getGlobalPosition().y - mainUI.height/2

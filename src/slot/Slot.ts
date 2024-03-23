@@ -271,7 +271,7 @@ export namespace Slots {
             playSound(R.Sounds.ReelStop, 0.2)
 
             if (wildFlag) {
-                // playSound(R.Sounds.Wild)
+                playSound(R.Sounds.Wild)
             }
         }
     }
@@ -391,6 +391,9 @@ export namespace Slots {
 
         public spinSound?: Sound;
 
+        private skipped: boolean = false;
+
+
         protected faces: Face[][] = [
             [Face.JOKER, Face.JOKER, Face.JOKER],
             [Face.JOKER, Face.JOKER, Face.JOKER],
@@ -456,8 +459,11 @@ export namespace Slots {
         }
 
         public skipSpin() {
-            this.slots.forEach((column: Column) => {column.setTargetTiles(column.getCurrentTiles() + 5)})
-            this.multiSlot.getSlots().forEach((column: Column) => {column.setTargetTiles(column.getCurrentTiles() + 5)})
+            if (!this.skipped) {
+                this.slots.forEach((column: Column) => {column.setTargetTiles(column.getCurrentTiles() + 5)});
+                this.multiSlot.getSlots().forEach((column: Column) => {column.setTargetTiles(column.getCurrentTiles() + 5)});
+                this.skipped = true;
+            }
         }
 
 
@@ -539,6 +545,8 @@ export namespace Slots {
             rewards.Total = total;
 
             this.spinSound?.stop();
+
+            this.skipped = false;
 
             super.onSpinDone()
         
@@ -636,7 +644,6 @@ export namespace Slots {
 
 
         public getSlots() : Column[] {
-            console.log(this.slots.length == 0)
             return this.slots;
         }
 
@@ -1170,5 +1177,5 @@ function playSound(src: String, volume: number = 1) : void {
     PIXI.Assets.load(src).then(sound => {
         sound.volume = volume
         sound.play()
-    });
+    }).catch((rs) => {});
 }
