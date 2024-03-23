@@ -76,6 +76,7 @@ export namespace R.Sounds {
     export const ExOn = `${sounds}/EX on sound.wav`
     export const Win = `${sounds}/WINPRICESOUND.mp3`
     export const ReelStop = `${sounds}/reel stop sound.mp3`
+    export const Spinning = `${sounds}/slot spinning (standby).mp3`
 
 }
 

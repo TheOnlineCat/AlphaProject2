@@ -196,15 +196,16 @@ namespace SlotStage{
             R.Sounds.Increment,
             R.Sounds.MegaWin,
             R.Sounds.SuperWin,
-            R.Sounds.Wild,
+            // R.Sounds.Wild,
             R.Sounds.SubstanstialWin,
             R.Sounds.Accumulate,
-            R.Sounds.Background,
+            // R.Sounds.Background,
             R.Sounds.ExOff,
             R.Sounds.ExOn,
             R.Sounds.ReelStop,
             R.Sounds.Win,
-            R.Sounds.Spin
+            R.Sounds.Spin,
+            R.Sounds.Spinning,
         ]
     
         for (let image of images) {
@@ -251,11 +252,11 @@ namespace SlotStage{
         await preloadAssets()
 
 
-        PIXI.Assets.load(R.Sounds.Background).then(sound => {
-            sound.loop = true;
-            sound.volume = 0.25;
-            sound.play()
-        });
+        // PIXI.Assets.load(R.Sounds.Background).then(sound => {
+        //     sound.loop = true;
+        //     sound.volume = 0.25;
+        //     sound.play()
+        // });
         
         
         
@@ -270,7 +271,7 @@ namespace SlotStage{
         
     
         const mainUI = await gameUI.create()
-        const fillWidthScale = contentContainer.width/mainUI.width
+        const fillWidthScale = (contentContainer.width)/mainUI.width
         mainUI.scale.set(fillWidthScale);
         mainUI.position.set(0, -contentContainer.height/2)
 
@@ -307,6 +308,7 @@ namespace SlotStage{
             } else if (slot.isSpinning) {
                 slot.skipSpin();
                 UI.deactivateSpinButton();
+                
             }
         }
 

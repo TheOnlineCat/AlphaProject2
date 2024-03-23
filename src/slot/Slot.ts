@@ -271,7 +271,7 @@ export namespace Slots {
             playSound(R.Sounds.ReelStop, 0.2)
 
             if (wildFlag) {
-                playSound(R.Sounds.Wild)
+                // playSound(R.Sounds.Wild)
             }
         }
     }
@@ -389,6 +389,8 @@ export namespace Slots {
         public multiplier: number = 1;
         private targetTiles: number = 40;
 
+        public spinSound?: Sound;
+
         protected faces: Face[][] = [
             [Face.JOKER, Face.JOKER, Face.JOKER],
             [Face.JOKER, Face.JOKER, Face.JOKER],
@@ -423,6 +425,10 @@ export namespace Slots {
 
             slotContainer.addChild(instance.multiSlot);
             instance.multiSlot.x += Math.ceil(columns / 2) * (Tile.Size);
+
+            instance.spinSound = (await PIXI.Assets.load(R.Sounds.Spinning)) as Sound;
+            instance.spinSound.loop = true;
+            instance.spinSound.volume = 0.25;
 
             return instance;
         }
@@ -460,15 +466,17 @@ export namespace Slots {
 
             this.isSpinning = true;
 
-            this.multiSlot.setFaces(this.multiFaces)
+            this.spinSound?.play();
+
+            this.multiSlot.setFaces(this.multiFaces);
 
             this.slots.forEach((column: Column) => {
                 column.setSpeed(this.spinSpeed)
                 column.setTargetTiles(this.targetTiles);
             })
 
-            this.multiSlot.getSlots().forEach((column: Column) => {column.setSpeed(this.spinSpeed)})
-            this.multiSlot.getSlots().forEach((column: Column) => {column.setTargetTiles(this.targetTiles)})
+            this.multiSlot.getSlots().forEach((column: Column) => {column.setSpeed(this.spinSpeed)});
+            this.multiSlot.getSlots().forEach((column: Column) => {column.setTargetTiles(this.targetTiles)});
             
 
             for(let i = 0; i < this.columns; i++) {
@@ -529,6 +537,8 @@ export namespace Slots {
                 total += rewards.Rewards[i] * rewards.Multiplier;
             }
             rewards.Total = total;
+
+            this.spinSound?.stop();
 
             super.onSpinDone()
         
@@ -738,13 +748,17 @@ export class SlotUI extends PIXI.Container{
         buttonContainer.addChild(instance.spinButton);
 
         instance.turboButton = await instance.CreateTurboButton()
+        instance.turboButton.x -= 325;
         buttonContainer.addChild(instance.turboButton);
 
         instance.exToggle = instance.CreateEXSwitch()
+        instance.exToggle.x -= 200;
         buttonContainer.addChild(instance.exToggle);
 
         
         instance.betUI = await instance.CreateBetUI()
+        instance.betUI.x += 350
+
         buttonContainer.addChild(instance.betUI)
 
         instance.addChild(buttonContainer)
@@ -754,7 +768,7 @@ export class SlotUI extends PIXI.Container{
 
         instance.amountContainer = await instance.CreateAmount();
         instance.amountContainer.scale.set(
-            Math.max(Math.abs(buttonContainer.getBounds().left * 2), Math.abs(buttonContainer.getBounds().right * 2)) / instance.amountContainer.width
+            (Math.max(Math.abs(buttonContainer.getBounds().left * 2), Math.abs(buttonContainer.getBounds().right * 2)) + 20) / instance.amountContainer.width
             );
         instance.amountContainer.y -= 200
         instance.addChild(instance.amountContainer)
@@ -864,7 +878,6 @@ export class SlotUI extends PIXI.Container{
         betContainer.addChild(decrementButton);
         betContainer.pivot.set(betContainer.width, 0)
 
-        betContainer.x += 350
         
 
         return(betContainer)
@@ -920,7 +933,6 @@ export class SlotUI extends PIXI.Container{
         const turboButton:PIXI.Sprite = new PIXI.Sprite(textures[R.Images.TurboButton]);
         turboButton.scale.set(0.17);
         turboButton.anchor.set(0, 0.5);
-        turboButton.x -= 350;
         turboButton.eventMode = 'static';
         turboButton.on('pointerup', () => {
             if(this.turbo){
@@ -949,7 +961,6 @@ export class SlotUI extends PIXI.Container{
         const exToggle:PIXI.Sprite = new PIXI.Sprite(textureOff);
         exToggle.scale.set(0.17);
         exToggle.anchor.set(0, 0.5);
-        exToggle.x -= 225;
         exToggle.eventMode = 'static';
         exToggle.on('pointerup', () => {
             if(this.ex){
@@ -1073,9 +1084,6 @@ export class SlotUI extends PIXI.Container{
         // const winBackground = Draw.PillShape(300, 50, 0x964B00);
         
 
-        
-        
-        
         const winBackground = PIXI.Sprite.from(await PIXI.Assets.load(R.Images.WinFrame))
         winContainter.addChild(winBackground)
 
@@ -1088,7 +1096,7 @@ export class SlotUI extends PIXI.Container{
         });
         winText.anchor.set(0.5);
 
-        winText.position.set(winBackground.width/2, winBackground.height/2);
+        winText.position.set(winBackground.width/2 + 55, winBackground.height/2);
         
         this.winText = winText;
         winContainter.addChild(winText);
@@ -1110,7 +1118,7 @@ export class SlotUI extends PIXI.Container{
             fontWeight:"bold"
         })
         betText.anchor.set(0.5);
-        betText.position.set(betBackground.width/2 + 45, betBackground.height/2);
+        betText.position.set(betBackground.width/2 + 25, betBackground.height/2);
         this.betText = betText
         betContainer.addChild(betText);
         betContainer.pivot.set(betContainer.width, 0)
